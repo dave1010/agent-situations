@@ -1,0 +1,13 @@
+name: nextjs-router
+description: Reminds the agent to use App Router syntax if detected.
+
+check:
+  type: file-exists
+  path: "app/page.tsx" # Triggers only if the App Router structure exists
+
+context:
+  type: static
+  text: |
+    CRITICAL: This project uses Next.js App Router.
+    - Do not use `getStaticProps` or `getServerSideProps`.
+    - Use async Server Components for data fetching.

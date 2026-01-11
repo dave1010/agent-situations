@@ -1,0 +1,5 @@
+name: git-status
+description: Injects the current branch and status if inside a git repo.
+
+# The Check: Determining if this situation is active
+run: ./git.sh # Output is appended to system prompt
