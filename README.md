@@ -3,6 +3,8 @@ Dynamic, ephemeral context injection for AI Coding Agents.
 
 Your shell prompt (PS1) knows when you switch git branches. It knows when your build is failing. It knows your Node version. **Why doesn't your AI Agent?**
 
+Read the original blog post: [Giving coding agents situational awareness (from shell prompts to agent prompts)](https://dave.engineer/blog/2026/01/agent-situations/).
+
 ## The Problem
 
 Most AI coding agents rely on static context:
@@ -105,7 +107,7 @@ Agents should:
 
 ## Contributing
 
-We welcome pull requests for the Standard Library of Situations, including checks for common languages, frameworks, and tools.
+We welcome pull requests for the [Standard Library of Situations](./catalog), including checks for common languages, frameworks, and tools.
 
 ## Licence
 
