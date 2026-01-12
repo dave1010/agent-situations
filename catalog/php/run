@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ ! -f "composer.json" ]]; then
+  exit 1
+fi
+
+php_requirement=""
+if grep -E '"php"[[:space:]]*:[[:space:]]*"[^"]+"' composer.json >/dev/null 2>&1; then
+  php_requirement=$(grep -E '"php"[[:space:]]*:[[:space:]]*"[^"]+"' composer.json | head -n1 | sed -E 's/.*"php"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+fi
+
+if [[ -n "${php_requirement}" ]]; then
+  echo "This is a PHP project with composer.json, requiring PHP ${php_requirement}."
+else
+  echo "This is a PHP project with composer.json."
+fi

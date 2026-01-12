@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ ! -f "package.json" ]]; then
+  exit 1
+fi
+
+node_requirement=""
+if grep -E '"node"[[:space:]]*:[[:space:]]*"[^"]+"' package.json >/dev/null 2>&1; then
+  node_requirement=$(grep -E '"node"[[:space:]]*:[[:space:]]*"[^"]+"' package.json | head -n1 | sed -E 's/.*"node"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+fi
+
+if [[ -n "${node_requirement}" ]]; then
+  echo "This is a Node.js project with package.json, requiring Node ${node_requirement}."
+else
+  echo "This is a Node.js project with package.json."
+fi

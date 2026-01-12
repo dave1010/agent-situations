@@ -1,0 +1,3 @@
+name: php
+description: Detect PHP projects via composer.json.
+run: run

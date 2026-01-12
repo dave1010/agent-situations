@@ -1,0 +1,3 @@
+name: java
+description: Detect Java projects via Maven or Gradle files.
+run: run
