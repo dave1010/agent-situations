@@ -14,8 +14,6 @@ fi
 
 if [[ "${in_container}" == "true" ]]; then
   messages+=("Running inside a container.")
-else
-  messages+=("Not running inside a container.")
 fi
 
 compose_files=()
@@ -28,8 +26,6 @@ done
 if [[ ${#compose_files[@]} -gt 0 ]]; then
   joined=$(IFS=,; echo "${compose_files[*]}")
   messages+=("Compose file(s) detected: ${joined}.")
-else
-  messages+=("No Compose files detected in repository root.")
 fi
 
 dockerfiles=()
@@ -42,8 +38,8 @@ done
 if [[ ${#dockerfiles[@]} -gt 0 ]]; then
   joined=$(IFS=,; echo "${dockerfiles[*]}")
   messages+=("Dockerfile detected: ${joined}.")
-else
-  messages+=("No Dockerfile detected in repository root.")
 fi
 
-printf '%s\n' "${messages[@]}"
+if [[ ${#messages[@]} -gt 0 ]]; then
+  printf '%s\n' "${messages[@]}"
+fi
