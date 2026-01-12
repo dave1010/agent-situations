@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+messages=()
+
+in_container="false"
+if [[ -f "/.dockerenv" ]]; then
+  in_container="true"
+elif [[ -f "/proc/1/cgroup" ]] && rg -q "(docker|kubepods|containerd|podman)" /proc/1/cgroup; then
+  in_container="true"
+elif [[ -n "${container:-}" ]]; then
+  in_container="true"
+fi
+
+if [[ "${in_container}" == "true" ]]; then
+  messages+=("Running inside a container.")
+else
+  messages+=("Not running inside a container.")
+fi
+
+compose_files=()
+for name in docker-compose.yml docker-compose.yaml compose.yml compose.yaml; do
+  if [[ -f "${name}" ]]; then
+    compose_files+=("${name}")
+  fi
+done
+
+if [[ ${#compose_files[@]} -gt 0 ]]; then
+  joined=$(IFS=,; echo "${compose_files[*]}")
+  messages+=("Compose file(s) detected: ${joined}.")
+else
+  messages+=("No Compose files detected in repository root.")
+fi
+
+dockerfiles=()
+for name in Dockerfile dockerfile; do
+  if [[ -f "${name}" ]]; then
+    dockerfiles+=("${name}")
+  fi
+done
+
+if [[ ${#dockerfiles[@]} -gt 0 ]]; then
+  joined=$(IFS=,; echo "${dockerfiles[*]}")
+  messages+=("Dockerfile detected: ${joined}.")
+else
+  messages+=("No Dockerfile detected in repository root.")
+fi
+
+printf '%s\n' "${messages[@]}"
