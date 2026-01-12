@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ruby_requirement=""
+
+if [[ -f ".ruby-version" ]]; then
+  ruby_requirement=$(head -n1 .ruby-version | tr -d '[:space:]')
+fi
+
+if [[ ! -f "Gemfile" && -z "${ruby_requirement}" ]]; then
+  exit 1
+fi
+
+if [[ -n "${ruby_requirement}" ]]; then
+  echo "This is a Ruby project, requiring Ruby ${ruby_requirement}."
+else
+  echo "This is a Ruby project with Gemfile."
+fi

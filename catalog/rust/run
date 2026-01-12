@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ ! -f "Cargo.toml" ]]; then
+  exit 1
+fi
+
+crate_name=""
+rust_version=""
+
+crate_name=$(awk -F= '
+  /^\[package\]/ {in_pkg=1; next}
+  /^\[/ {in_pkg=0}
+  in_pkg && /^name[[:space:]]*=/ {
+    gsub(/[[:space:]]|"/, "", $2);
+    print $2;
+    exit
+  }
+' Cargo.toml || true)
+
+rust_version=$(awk -F= '
+  /^\[package\]/ {in_pkg=1; next}
+  /^\[/ {in_pkg=0}
+  in_pkg && /^rust-version[[:space:]]*=/ {
+    gsub(/[[:space:]]|"/, "", $2);
+    print $2;
+    exit
+  }
+' Cargo.toml || true)
+
+if [[ -n "${crate_name}" && -n "${rust_version}" ]]; then
+  echo "Rust crate detected: ${crate_name} (rust-version ${rust_version})."
+elif [[ -n "${crate_name}" ]]; then
+  echo "Rust crate detected: ${crate_name}."
+elif [[ -n "${rust_version}" ]]; then
+  echo "Rust project detected (rust-version ${rust_version})."
+else
+  echo "Rust project detected (Cargo.toml present)."
+fi

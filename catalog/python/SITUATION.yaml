@@ -1,0 +1,3 @@
+name: python
+description: Detect Python projects via pyproject.toml, requirements.txt, or setup files.
+run: run

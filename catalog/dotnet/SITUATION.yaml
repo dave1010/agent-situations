@@ -1,0 +1,3 @@
+name: dotnet
+description: Detect .NET projects via project or solution files.
+run: run

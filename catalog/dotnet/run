@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_file=""
+
+for candidate in *.csproj *.fsproj *.vbproj; do
+  if [[ -f "${candidate}" ]]; then
+    project_file="${candidate}"
+    break
+  fi
+done
+
+if [[ -z "${project_file}" && ! -f "global.json" ]]; then
+  if ! compgen -G "*.sln" >/dev/null 2>&1; then
+    exit 1
+  fi
+fi
+
+framework=""
+
+if [[ -n "${project_file}" ]]; then
+  if grep -E '<TargetFrameworks?>' "${project_file}" >/dev/null 2>&1; then
+    framework=$(grep -E '<TargetFrameworks?>' "${project_file}" | head -n1 | sed -E 's/.*<TargetFrameworks?>([^<]+)<.*/\1/')
+  fi
+fi
+
+if [[ -n "${framework}" ]]; then
+  echo "This is a .NET project (${project_file}), targeting ${framework}."
+elif [[ -n "${project_file}" ]]; then
+  echo "This is a .NET project (${project_file})."
+elif [[ -f "global.json" ]]; then
+  echo "This is a .NET project with global.json."
+else
+  echo "This is a .NET project (solution detected)."
+fi

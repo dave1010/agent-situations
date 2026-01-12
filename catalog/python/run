@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_files=()
+python_requirement=""
+
+if [[ -f "pyproject.toml" ]]; then
+  project_files+=("pyproject.toml")
+  python_requirement=$(awk -F= '/^requires-python[[:space:]]*=/ {gsub(/[[:space:]]|"/,"",$2); print $2; exit}' pyproject.toml || true)
+  if [[ -z "${python_requirement}" ]]; then
+    python_requirement=$(awk '
+      /^\[tool.poetry.dependencies\]/ {in_section=1; next}
+      /^\[/ {in_section=0}
+      in_section && /^python[[:space:]]*=/ {
+        split($0, parts, "=");
+        gsub(/[[:space:]]|"/, "", parts[2]);
+        print parts[2];
+        exit
+      }
+    ' pyproject.toml || true)
+  fi
+fi
+
+if [[ -f "requirements.txt" ]]; then
+  project_files+=("requirements.txt")
+fi
+
+if [[ -f "setup.cfg" ]]; then
+  project_files+=("setup.cfg")
+fi
+
+if [[ -f "setup.py" ]]; then
+  project_files+=("setup.py")
+fi
+
+if [[ ${#project_files[@]} -eq 0 ]]; then
+  exit 1
+fi
+
+joined=$(IFS=,; echo "${project_files[*]}")
+if [[ -n "${python_requirement}" ]]; then
+  echo "This is a Python project (${joined}), requiring Python ${python_requirement}."
+else
+  echo "This is a Python project (${joined})."
+fi

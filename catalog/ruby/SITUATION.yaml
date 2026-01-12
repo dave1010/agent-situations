@@ -1,0 +1,3 @@
+name: ruby
+description: Detect Ruby projects via Gemfile or .ruby-version.
+run: run

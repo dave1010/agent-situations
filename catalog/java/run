@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+has_project=false
+java_version=""
+
+if [[ -f "pom.xml" ]]; then
+  has_project=true
+  if grep -E '<maven.compiler.release>|<maven.compiler.source>' pom.xml >/dev/null 2>&1; then
+    java_version=$(grep -E '<maven.compiler.release>|<maven.compiler.source>' pom.xml | head -n1 | sed -E 's/.*<[^>]+>([^<]+)<.*/\1/')
+  fi
+fi
+
+if [[ -f "build.gradle" || -f "build.gradle.kts" ]]; then
+  has_project=true
+  gradle_file=""
+  if [[ -f "build.gradle" ]]; then
+    gradle_file="build.gradle"
+  else
+    gradle_file="build.gradle.kts"
+  fi
+
+  if [[ -z "${java_version}" ]]; then
+    if grep -E 'sourceCompatibility|JavaLanguageVersion.of' "${gradle_file}" >/dev/null 2>&1; then
+      java_version=$(grep -E 'sourceCompatibility|JavaLanguageVersion.of' "${gradle_file}" | head -n1 | sed -E 's/.*JavaLanguageVersion.of\(([0-9]+)\).*/\1/; s/.*sourceCompatibility[[:space:]]*=?[[:space:]]*"?([0-9\.]+)"?.*/\1/')
+    fi
+  fi
+fi
+
+if [[ "${has_project}" = false ]]; then
+  exit 1
+fi
+
+if [[ -n "${java_version}" ]]; then
+  echo "This is a Java project, targeting Java ${java_version}."
+else
+  echo "This is a Java project (Maven/Gradle detected)."
+fi
