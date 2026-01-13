@@ -63,6 +63,23 @@ context:
     - Do not use `getStaticProps` or `getServerSideProps`.
     - Use async Server Components for data fetching.
 ```
+
+## Situations vs. AGENTS.md
+
+AGENTS.md is a static document written for agents. It's great for stable guidance like coding conventions or architecture decisions, but it drifts when the environment changes (node versions, failing builds, active branches).
+
+Situations are dynamic and ephemeral. They only appear when the check passes and disappear when it doesn't, so the agent always sees context that is current and relevant.
+
+**Use both**: keep enduring human guidance in AGENTS.md, and let Situations supply volatile, environment-specific context.
+
+## Situations vs. Skills
+
+Skills (like Claude Code's SKILL.md) are a discoverability mechanism: a table of contents that the agent can choose to read. They're great for optional knowledge and tool usage but still require manual enablement or selection.
+
+Situations are self-selecting. They run checks automatically and push context into the system prompt only when applicable, reducing agent guesswork and avoiding unnecessary prompt bloat.
+
+**Use both**: Skills help agents discover capabilities; Situations keep the prompt accurate to the current environment.
+
 ## Situations vs. MCP (Model Context Protocol)
 
 MCP is great for connecting agents to external servers (Postgres, Slack, GitHub APIs). It provides Tools and Resources (and Prompts).
@@ -70,6 +87,28 @@ MCP is great for connecting agents to external servers (Postgres, Slack, GitHub 
 Situations are for local, immediate environment state. They are the "System Prompt" equivalent of PS1.
 
 Situations are "Push" (context is forced on the agent). Tools/MCP are "Pull" (agent requests information).
+
+## FAQ
+
+### Where do Situations live?
+
+In a `.situations/` directory. Agents can support a global path (shared across projects) and a local project path, then merge results.
+
+### What types of checks are supported?
+
+Checks can be file existence, regex matches, environment variables, or running an executable and checking its exit code.
+
+### How does a Situation provide context?
+
+Context can be static text, file content, or the output of an executable.
+
+### Are Situations safe to run?
+
+Executable Situations (`run`) can run arbitrary code, so they should only be used from trusted sources. Agents should prompt before running project-level scripts.
+
+### How are Situations different from shell prompts?
+
+Shell prompts render a view of state for humans; Situations render a view of state for agents. Both are fast, contextual, and refresh whenever you run a command.
 
 ## Schema Reference
 
