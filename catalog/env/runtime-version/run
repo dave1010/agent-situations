@@ -1,0 +1,265 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+trim() {
+  local value
+  value="$1"
+  echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+strip_v_prefix() {
+  local value
+  value="$1"
+  echo "${value#v}"
+}
+
+version_ge() {
+  local a b
+  a="$1"
+  b="$2"
+  [[ "$(printf '%s\n' "$b" "$a" | sort -V | head -n1)" == "$b" ]]
+}
+
+version_gt() {
+  local a b
+  a="$1"
+  b="$2"
+  [[ "$a" != "$b" ]] && version_ge "$a" "$b"
+}
+
+version_le() {
+  local a b
+  a="$1"
+  b="$2"
+  [[ "$(printf '%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
+}
+
+version_lt() {
+  local a b
+  a="$1"
+  b="$2"
+  [[ "$a" != "$b" ]] && version_le "$a" "$b"
+}
+
+version_prefix_match() {
+  local current expected
+  current="$1"
+  expected="$2"
+  if [[ "$current" == "$expected" ]]; then
+    return 0
+  fi
+  if [[ "$current" == "$expected".* ]]; then
+    return 0
+  fi
+  return 1
+}
+
+upper_bound_compatible() {
+  local version major minor patch
+  version="$1"
+  IFS='.' read -r major minor patch <<<"$version"
+  major=${major:-0}
+  minor=${minor:-0}
+  patch=${patch:-0}
+
+  if [[ -n "$patch" && "$patch" != "0" ]]; then
+    echo "${major}.$((minor + 1)).0"
+    return 0
+  fi
+
+  if [[ -n "$minor" ]]; then
+    echo "$((major + 1)).0.0"
+    return 0
+  fi
+
+  echo "$((major + 1)).0.0"
+}
+
+python_spec_satisfied() {
+  local current spec
+  current="$1"
+  spec="$2"
+  spec="${spec// /}"
+
+  IFS=',' read -r -a parts <<<"$spec"
+  for part in "${parts[@]}"; do
+    [[ -z "$part" ]] && continue
+    if [[ "$part" == ">="* ]]; then
+      version_ge "$current" "${part#>=}" || return 1
+    elif [[ "$part" == ">"* ]]; then
+      version_gt "$current" "${part#>}" || return 1
+    elif [[ "$part" == "<="* ]]; then
+      version_le "$current" "${part#<=}" || return 1
+    elif [[ "$part" == "<"* ]]; then
+      version_lt "$current" "${part#<}" || return 1
+    elif [[ "$part" == "=="* ]]; then
+      version_prefix_match "$current" "${part#==}" || return 1
+    elif [[ "$part" == "!="* ]]; then
+      version_prefix_match "$current" "${part#!=}" && return 1
+    elif [[ "$part" == "~="* ]]; then
+      local base upper
+      base="${part#~=}"
+      upper=$(upper_bound_compatible "$base")
+      version_ge "$current" "$base" || return 1
+      version_lt "$current" "$upper" || return 1
+    elif [[ "$part" == "^"* ]]; then
+      local base upper
+      base="${part#^}"
+      upper=$(upper_bound_compatible "$base")
+      version_ge "$current" "$base" || return 1
+      version_lt "$current" "$upper" || return 1
+    else
+      version_prefix_match "$current" "$part" || return 1
+    fi
+  done
+}
+
+expected_node_versions=()
+expected_python_versions=()
+expected_python_specs=()
+expected_go_versions=()
+source_files=()
+
+if [[ -f ".nvmrc" ]]; then
+  source_files+=(".nvmrc")
+  node_version=$(strip_v_prefix "$(trim "$(cat .nvmrc)")")
+  [[ -n "$node_version" ]] && expected_node_versions+=("$node_version")
+fi
+
+if [[ -f ".node-version" ]]; then
+  source_files+=(".node-version")
+  node_version=$(strip_v_prefix "$(trim "$(cat .node-version)")")
+  [[ -n "$node_version" ]] && expected_node_versions+=("$node_version")
+fi
+
+if [[ -f ".tool-versions" ]]; then
+  source_files+=(".tool-versions")
+  while read -r tool version; do
+    [[ -z "$tool" || "$tool" == "#"* ]] && continue
+    case "$tool" in
+      nodejs|node)
+        expected_node_versions+=("$(strip_v_prefix "$version")")
+        ;;
+      python|python3)
+        expected_python_versions+=("$(strip_v_prefix "$version")")
+        ;;
+      golang|go)
+        expected_go_versions+=("$(strip_v_prefix "$version")")
+        ;;
+    esac
+  done < .tool-versions
+fi
+
+if [[ -f ".python-version" ]]; then
+  source_files+=(".python-version")
+  python_version=$(strip_v_prefix "$(trim "$(cat .python-version)")")
+  [[ -n "$python_version" ]] && expected_python_versions+=("$python_version")
+fi
+
+if [[ -f "pyproject.toml" ]]; then
+  source_files+=("pyproject.toml")
+  python_requirement=$(awk -F= '/^requires-python[[:space:]]*=/ {gsub(/[[:space:]]|"/,"",$2); print $2; exit}' pyproject.toml || true)
+  if [[ -z "$python_requirement" ]]; then
+    python_requirement=$(awk '
+      /^\[tool.poetry.dependencies\]/ {in_section=1; next}
+      /^\[/ {in_section=0}
+      in_section && /^python[[:space:]]*=/ {
+        split($0, parts, "=");
+        gsub(/[[:space:]]|"/, "", parts[2]);
+        print parts[2];
+        exit
+      }
+    ' pyproject.toml || true)
+  fi
+  if [[ -n "$python_requirement" ]]; then
+    expected_python_specs+=("$python_requirement")
+  fi
+fi
+
+if [[ ${#source_files[@]} -eq 0 ]]; then
+  exit 1
+fi
+
+current_node=""
+if command -v node >/dev/null 2>&1; then
+  current_node=$(strip_v_prefix "$(node -v)")
+fi
+
+current_python=""
+if command -v python >/dev/null 2>&1; then
+  current_python=$(strip_v_prefix "$(python -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')")
+elif command -v python3 >/dev/null 2>&1; then
+  current_python=$(strip_v_prefix "$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')")
+fi
+
+current_go=""
+if command -v go >/dev/null 2>&1; then
+  current_go=$(go version | awk '{print $3}' | sed 's/^go//')
+fi
+
+warnings=()
+
+if [[ ${#expected_node_versions[@]} -gt 0 ]]; then
+  if [[ -z "$current_node" ]]; then
+    warnings+=("Node.js is not available, but this project expects Node.js ${expected_node_versions[*]}.")
+  else
+    for expected in "${expected_node_versions[@]}"; do
+      if ! version_prefix_match "$current_node" "$expected"; then
+        warnings+=("Node.js ${expected} is required, but current version is ${current_node}.")
+      fi
+    done
+  fi
+fi
+
+if [[ ${#expected_python_versions[@]} -gt 0 ]]; then
+  if [[ -z "$current_python" ]]; then
+    warnings+=("Python is not available, but this project expects Python ${expected_python_versions[*]}.")
+  else
+    for expected in "${expected_python_versions[@]}"; do
+      if ! version_prefix_match "$current_python" "$expected"; then
+        warnings+=("Python ${expected} is required, but current version is ${current_python}.")
+      fi
+    done
+  fi
+fi
+
+if [[ ${#expected_python_specs[@]} -gt 0 ]]; then
+  if [[ -z "$current_python" ]]; then
+    warnings+=("Python is not available, but this project requires Python ${expected_python_specs[*]}.")
+  else
+    for spec in "${expected_python_specs[@]}"; do
+      if ! python_spec_satisfied "$current_python" "$spec"; then
+        warnings+=("Python ${spec} is required, but current version is ${current_python}.")
+      fi
+    done
+  fi
+fi
+
+if [[ ${#expected_go_versions[@]} -gt 0 ]]; then
+  if [[ -z "$current_go" ]]; then
+    warnings+=("Go is not available, but this project expects Go ${expected_go_versions[*]}.")
+  else
+    for expected in "${expected_go_versions[@]}"; do
+      if ! version_prefix_match "$current_go" "$expected"; then
+        warnings+=("Go ${expected} is required, but current version is ${current_go}.")
+      fi
+    done
+  fi
+fi
+
+if [[ ${#warnings[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+joined_sources=$(IFS=,; echo "${source_files[*]}")
+
+cat <<MESSAGE
+WARNING: Runtime versions do not match the project configuration (${joined_sources}).
+
+${warnings[*]}
+
+Switch versions with one of:
+- nvm use <version>
+- pyenv local <version>
+- asdf install
+MESSAGE
