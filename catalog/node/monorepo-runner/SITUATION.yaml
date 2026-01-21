@@ -1,0 +1,14 @@
+name: monorepo-runner
+description: Reminds the agent to use monorepo tool commands when detected.
+
+check:
+  type: run
+  path: run
+
+context:
+  type: static
+  text: |
+    CRITICAL: Monorepo tooling detected (nx/turbo/changesets).
+    - If `nx.json` exists, use `nx` commands (e.g., `nx run`, `nx test`, `nx affected`) instead of guessing root `npm` scripts.
+    - If `turbo.json` exists, use `turbo` commands (e.g., `turbo run build`) instead of guessing root `npm` scripts.
+    - If `.changeset/` exists, use `changeset` commands (e.g., `changeset add`, `changeset version`, `changeset publish`) instead of guessing root `npm` scripts.
