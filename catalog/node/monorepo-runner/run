@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -f "nx.json" || -f "turbo.json" || -d ".changeset" ]]; then
+  exit 0
+fi
+
+exit 1
