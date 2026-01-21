@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+tools=()
+commands=()
+
+add_tool() {
+  tools+=("$1")
+  commands+=("$2")
+}
+
+if compgen -G ".prettierrc*" > /dev/null; then
+  add_tool "Prettier" "npx prettier --check ."
+fi
+
+if compgen -G ".eslintrc*" > /dev/null; then
+  add_tool "ESLint" "npm run lint"
+fi
+
+if [[ -f "ruff.toml" ]]; then
+  add_tool "Ruff" "ruff check"
+fi
+
+if [[ -f "pyproject.toml" ]] && rg --quiet "^\\[tool\\.black\\]" pyproject.toml; then
+  add_tool "Black" "black ."
+fi
+
+if [[ ${#tools[@]} -eq 0 ]]; then
+  exit 1
+fi
+
+echo "Formatting and linting tools detected:"
+for i in "${!tools[@]}"; do
+  echo "- ${tools[$i]}: \`${commands[$i]}\`"
+done

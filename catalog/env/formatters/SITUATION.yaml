@@ -1,0 +1,3 @@
+name: env-formatters
+description: Detect formatter/linter configs and suggest expected commands.
+run: run
