@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+lockfiles=(pnpm-lock.yaml yarn.lock package-lock.json bun.lockb)
+found=()
+
+for lockfile in "${lockfiles[@]}"; do
+  if [[ -f "${lockfile}" ]]; then
+    found+=("${lockfile}")
+  fi
+done
+
+if [[ ${#found[@]} -eq 0 ]]; then
+  exit 1
+fi
+
+primary=""
+primary_pm=""
+for lockfile in "${lockfiles[@]}"; do
+  if [[ -f "${lockfile}" ]]; then
+    primary="${lockfile}"
+    case "${lockfile}" in
+      pnpm-lock.yaml) primary_pm="pnpm" ;;
+      yarn.lock) primary_pm="yarn" ;;
+      package-lock.json) primary_pm="npm" ;;
+      bun.lockb) primary_pm="bun" ;;
+    esac
+    break
+  fi
+done
+
+printf "Node.js package manager lockfiles found: %s.\n" "${found[*]}"
+printf "Use %s (priority lockfile: %s).\n" "${primary_pm}" "${primary}"
+if [[ ${#found[@]} -gt 1 ]]; then
+  printf "Do not edit or regenerate other lockfiles: %s.\n" "${found[*]}"
+else
+  printf "Do not edit or regenerate other lockfiles.\n"
+fi
