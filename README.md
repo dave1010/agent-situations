@@ -26,7 +26,7 @@ Situations are lightweight, declarative definitions that allow an agent to autom
 
 ## How it works
 
-1. **Discovery**: The agent scans a `.situations/` directory (global or local).
+1. **Discovery**: The agent scans a `.agent/situations/` directory (global or local).
 2. **Evaluation**: The agent evaluates the check condition for every Situation (e.g., file existence, regex match, or exit code).
 3. **Injection**: If (and only if) the check passes, the Situation's context is appended to the system prompt.
 
@@ -39,7 +39,7 @@ A Situation is defined by a `SITUATION.yaml` file.
 Imagine an agent that always knows the state of your working tree without you having to paste `git status` output.
 
 ```yaml
-# .situations/git-context/SITUATION.yaml
+# .agent/situations/git-context/SITUATION.yaml
 name: git-status
 description: Injects the current branch and status if inside a git repo.
 
@@ -52,7 +52,7 @@ run: ./git.sh # Output is appended to system prompt
 Situations don't always need to execute code. They can be safe, static checks.
 
 ```yaml
-# .situations/nextjs/SITUATION.yaml
+# .agent/situations/nextjs/SITUATION.yaml
 name: nextjs-router
 description: Reminds the agent to use App Router syntax if detected.
 
@@ -95,7 +95,7 @@ This specification is currently implemented in [Jorin](https://github.com/dave10
 
 ### Where do Situations live?
 
-In a `.situations/` directory. Agents can support a global path (shared across projects) and a local project path, then merge results.
+In a `.agent/situations/` directory. Agents can support a global path (shared across projects) and a local project path, then merge results.
 
 ### What types of checks are supported?
 
